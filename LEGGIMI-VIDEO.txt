@@ -15,3 +15,10 @@ REGISTRATORE (pulsante ⏺ REC, Ctrl+Maiusc+R)
 
 ffmpeg: lo cerca nel PATH, in Downloads\YT-DLP e accanto all'app.
 Non scarica: dirette, flussi con DRM, link scaduti.
+
+CATTURA DAL PLAYER (1.4.2)
+ - Quando un sito usa un player che non mostra link, nel pannello 🎬 compare "Player della pagina · cattura mentre guardi".
+ - Premi ⏺ Cattura e fai andare il video: la cattura parte da dove sei. ⏩ accelera la riproduzione (senza audio), ⏹ Salva crea il file, ✕ annulla.
+ - Meglio avviarla prima di far partire il video, o ricarica la pagina: serve l'intestazione del video.
+ - Con ffmpeg video e audio vengono uniti in un solo file; senza, restano separati.
+ - Non funziona sui contenuti con DRM.

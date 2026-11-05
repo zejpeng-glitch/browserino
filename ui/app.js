@@ -1,6 +1,6 @@
 "use strict";
 var $ = function (id) { return document.getElementById(id); };
-var addr = $("addr"), cfg = { favs: [], blockJump: true, last: "" };
+var addr = $("addr"), cfg = { favs: [], blockJump: true, favbar: true, last: "" };
 var tabs = [], cur = null, view = null, tabSeq = 1;
 var IS_MAC = /Mac/i.test(navigator.platform);
 var toastT;
@@ -13,7 +13,7 @@ function norm(s) {
   if (/^[^\s]+\.[^\s]{2,}(\/.*)?$/.test(s)) return "https://" + s;
   return "https://www.google.com/search?q=" + encodeURIComponent(s);
 }
-function save() { window.bn.setCfg({ favs: cfg.favs, blockJump: cfg.blockJump }); }
+function save() { window.bn.setCfg({ favs: cfg.favs, blockJump: cfg.blockJump, favbar: cfg.favbar }); drawFavBar(); }
 
 // ---------------- schede ----------------
 function tabLabel(t) {
@@ -126,6 +126,7 @@ function wire(t) {
     drawTabs();
   });
   v.addEventListener("did-navigate-in-page", function (e) { if (e.isMainFrame) { t.url = e.url; if (t === cur) addr.value = e.url; } });
+  v.addEventListener("page-favicon-updated", function (e) { if (e.favicons && e.favicons[0]) t.icon = e.favicons[0]; });
   v.addEventListener("page-title-updated", function (e) { t.title = e.title; drawTabs(); });
   v.addEventListener("did-fail-load", function (e) { if (e.isMainFrame && e.errorCode !== -3 && t === cur) toast("Non riesco ad aprire la pagina (" + e.errorDescription + ")"); });
 }
@@ -144,6 +145,39 @@ function drawTiles() {
     d.appendChild(x); d.appendChild(b); d.appendChild(s); t.appendChild(d);
   });
 }
+function drawFavBar() {
+  var b = $("favbar"); b.innerHTML = "";
+  b.classList.toggle("hide", cfg.favbar === false);
+  if (!cfg.favs.length) { b.innerHTML = '<span class="fempty">I tuoi preferiti appariranno qui: premi ☆ su un sito (Ctrl+Maiusc+B nasconde la barra)</span>'; return; }
+  cfg.favs.forEach(function (f, i) {
+    var c = document.createElement("div"); c.className = "fchip"; c.title = (f.title || "") + "\n" + f.url;
+    if (f.icon) { var im = document.createElement("img"); im.src = f.icon; im.onerror = function () { im.remove(); }; c.appendChild(im); }
+    var s = document.createElement("span"); s.textContent = f.title || hostName(f.url); c.appendChild(s);
+    c.onclick = function (e) { if (e.ctrlKey || e.metaKey) newTab(f.url, false); else go(f.url); };
+    c.onauxclick = function (e) { if (e.button === 1) { e.preventDefault(); newTab(f.url, false); toast("Aperto in una nuova scheda"); } };
+    c.oncontextmenu = function (e) {
+      e.preventDefault();
+      showMenu(e.clientX, e.clientY, [
+        ["Apri in una nuova scheda", function () { newTab(f.url, true); }],
+        ["Copia indirizzo", function () { navigator.clipboard.writeText(f.url).then(function () { toast("Copiato"); }); }],
+        ["Rimuovi dai preferiti", function () { cfg.favs.splice(i, 1); save(); drawTiles(); refreshFav(); }]
+      ]);
+    };
+    b.appendChild(c);
+  });
+}
+function showMenu(x, y, items) {
+  closeMenu();
+  var m = document.createElement("div"); m.id = "cmenu";
+  items.forEach(function (it) { var d = document.createElement("div"); d.textContent = it[0]; d.onclick = function () { closeMenu(); it[1](); }; m.appendChild(d); });
+  document.body.appendChild(m);
+  m.style.left = Math.min(x, innerWidth - m.offsetWidth - 6) + "px"; m.style.top = Math.min(y, innerHeight - m.offsetHeight - 6) + "px";
+  setTimeout(function () { document.addEventListener("mousedown", function h(e) { if (e.target.closest && e.target.closest("#cmenu")) return; document.removeEventListener("mousedown", h); closeMenu(); }); }, 0);
+}
+function closeMenu() { var m = $("cmenu"); if (m) m.remove(); }
+window.addEventListener("blur", closeMenu);
+window.bn.onPasteGo(function (t) { if (document.activeElement === addr) { addr.value = t; go(t); } else go(t); });
+
 function curUrl() { return cur && cur.ready && !cur.home ? view.getURL() : ""; }
 function isFav() { var u = curUrl(); return !!u && cfg.favs.some(function (f) { return f.url === u; }); }
 function refreshFav() { $("fav").textContent = isFav() ? "★" : "☆"; }
@@ -162,7 +196,7 @@ $("fav").onclick = function () {
   var u = view.getURL();
   var i = cfg.favs.findIndex(function (f) { return f.url === u; });
   if (i >= 0) { cfg.favs.splice(i, 1); toast("Tolto dai preferiti"); }
-  else { cfg.favs.push({ url: u, title: view.getTitle() }); toast("Aggiunto ai preferiti"); }
+  else { cfg.favs.push({ url: u, title: view.getTitle(), icon: cur.icon || "" }); toast("Aggiunto ai preferiti"); }
   save(); refreshFav();
 };
 $("jump").onclick = function () { cfg.blockJump = !cfg.blockJump; save(); drawJump(); toast(cfg.blockJump ? "Salti di pagina bloccati" : "Salti di pagina permessi"); };
@@ -186,6 +220,15 @@ function renderVideos() {
   }
   vlist.forEach(function (v) {
     var r = document.createElement("div"); r.className = "vrow";
+    if (v.kind === "mse") {
+      var ci = document.createElement("div"); ci.className = "vi";
+      var cl = document.createElement("div"); cl.className = "vl"; cl.textContent = v.label;
+      var ch = document.createElement("div"); ch.className = "vh"; ch.textContent = v.host + " · per quando non c'è un link: registra il video mentre scorre (anche accelerato)";
+      ci.appendChild(cl); ci.appendChild(ch);
+      var cb = document.createElement("button"); cb.textContent = "⏺ Cattura"; cb.title = "Copia il video mentre il player lo riproduce";
+      cb.onclick = function () { window.bn.vidCapture(v.id).then(function (x) { if (x && x.error) toast(x.error, 6000); else toast("Cattura partita: fai andare il video. Quando vuoi premi ⏹ Salva nel pannello.", 5000); }); };
+      r.appendChild(ci); r.appendChild(cb); box.appendChild(r); return;
+    }
     var i = document.createElement("div"); i.className = "vi";
     var l = document.createElement("div"); l.className = "vl"; l.textContent = v.label;
     var h = document.createElement("div"); h.className = "vh"; h.textContent = v.host + (v.src === "pagina" ? " · trovato nella pagina" : "");
@@ -215,7 +258,7 @@ $("vscan").onclick = function () {
 };
 // ---- download: una riga per ciascuno, con pausa / riprendi / annulla ----
 var dls = {}; // id -> { id, name, pct, text, state: run|paused|done|err|canceled }
-function activeDls() { return Object.keys(dls).filter(function (k) { var s = dls[k].state; return s === "run" || s === "paused"; }).length; }
+function activeDls() { return Object.keys(dls).filter(function (k) { var s = dls[k].state; return s === "run" || s === "paused" || s === "capture" || s === "saving"; }).length; }
 function updateVidBtn() {
   var n = activeDls();
   $("vid").textContent = "🎬 " + vlist.length + (n ? " ⬇" + n : "");
@@ -229,6 +272,19 @@ function renderDls() {
     var top = document.createElement("div"); top.className = "dtop";
     var nm = document.createElement("div"); nm.className = "dname"; nm.textContent = j.name; nm.title = j.name; top.appendChild(nm);
     function btn(label, title, fn) { var b = document.createElement("button"); b.textContent = label; b.title = title; b.onclick = fn; top.appendChild(b); }
+    if (j.state === "capture") {
+      var rates = [1, 2, 4, 8];
+      btn("⏩ ×" + (j.rate || 1), "Velocità di riproduzione della pagina (più veloce = cattura più in fretta, senza audio)", function () {
+        var n = rates[(rates.indexOf(j.rate || 1) + 1) % rates.length]; j.rate = n; window.bn.vidCtl(id, "speed:" + n); renderDls();
+      });
+      btn("⏹ Salva", "Ferma la cattura e salva il file", function () { j.state = "saving"; j.text = "Salvo il file…"; window.bn.vidCtl(id, "save"); renderDls(); updateVidBtn(); });
+      btn("✕", "Annulla la cattura", function () { window.bn.vidCtl(id, "cancel"); });
+    }
+    if (j.boostable && (j.state === "run" || j.state === "paused")) {
+      btn(j.boost ? "⚡ ON" : "⚡", "Boost: più richieste in parallelo per scaricare più in fretta (se il server rifiuta scende da solo)", function () {
+        j.boost = !j.boost; window.bn.vidCtl(id, "boost:" + (j.boost ? 1 : 0)); renderDls();
+      });
+    }
     if (j.state === "run") btn("⏸", "Metti in pausa", function () { j.state = "paused"; window.bn.vidCtl(id, "pause"); renderDls(); updateVidBtn(); });
     if (j.state === "paused") btn("▶", "Riprendi", function () { j.state = "run"; window.bn.vidCtl(id, "resume"); renderDls(); updateVidBtn(); });
     if (j.state === "run" || j.state === "paused") btn("✕", "Annulla e cancella il file parziale", function () { window.bn.vidCtl(id, "cancel"); });
@@ -245,7 +301,10 @@ function renderDls() {
 window.bn.onDl(function (d) {
   var j = dls[d.id] || (dls[d.id] = { id: d.id, name: d.name || "download", pct: 0, text: "parto", state: "run" });
   if (d.name) j.name = d.name;
+  if (d.boostable) j.boostable = true;
   if (d.canceled) { j.state = "canceled"; j.text = "⛔ Annullato"; }
+  else if (d.capture) { if (j.state !== "saving") j.state = "capture"; j.text = d.text; if (d.rate) j.rate = d.rate; }
+  else if (d.saving) { j.state = "saving"; j.text = d.text; }
   else if (d.error) { j.state = "err"; j.text = "⚠ " + d.error; toast("Download non riuscito: " + d.error); }
   else if (d.done) { j.state = "done"; j.pct = 100; j.text = "✅ Salvato" + (d.note ? " — " + d.note : ""); toast("Scaricato: " + j.name + (d.note ? " — " + d.note : ""), d.note ? 7000 : 2200); }
   else {
@@ -285,6 +344,7 @@ function shortcut(c) {
     case "ctrl+shift+tab": select(tabs[(tabs.indexOf(cur) - 1 + tabs.length) % tabs.length]); return true;
     case "ctrl+l": addr.focus(); addr.select(); return true;
     case "ctrl+d": $("fav").click(); return true;
+    case "ctrl+shift+b": cfg.favbar = cfg.favbar === false; save(); return true;
     case "ctrl+j": $("vid").click(); return true;
     case "ctrl+shift+r": $("rec").click(); return true;
     case "f5": if (!cur.home) view.reload(); return true;
@@ -302,8 +362,8 @@ document.addEventListener("keydown", function (e) {
 
 newTab(null, true);
 window.bn.getCfg().then(function (c) {
-  cfg.favs = c.favs || []; cfg.blockJump = c.blockJump !== false;
-  drawJump(); drawTiles(); refreshNav();
+  cfg.favs = c.favs || []; cfg.blockJump = c.blockJump !== false; cfg.favbar = c.favbar !== false;
+  drawJump(); drawTiles(); drawFavBar(); refreshNav();
 });
 
 // edizione demo: badge sempre visibile + avviso chiaro nel pannello video

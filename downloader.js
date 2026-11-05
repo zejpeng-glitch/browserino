@@ -247,6 +247,11 @@ async function downloadHls({ open, url, headers, outPath, pick, onProgress = () 
   };
 
   const st = { conc: concurrency, search: null, waiting: null, signal };
+  const BOOST = 16; // con il boost acceso: fino a 16 richieste alla volta (se il server comincia a rifiutare scendo da solo)
+  if (signal) signal.setBoost = on => {
+    st.conc = on ? BOOST : Math.min(st.conc, concurrency);
+    LOG(on ? "⚡ boost acceso: fino a " + BOOST + " richieste alla volta" : "⚡ boost spento: " + st.conc + " richieste alla volta");
+  };
   const urlOf = u => (st.search ? withSearch(u, st.search) : u);
   const sameQ = (u, ns) => new URL(urlOf(u)).search === ns;
   const accept = (u, ns) => {
@@ -334,7 +339,7 @@ async function downloadHls({ open, url, headers, outPath, pick, onProgress = () 
           finally { active--; }
         }
       }
-      await Promise.all(Array.from({ length: Math.max(concurrency, 1) }, worker));
+      await Promise.all(Array.from({ length: Math.max(concurrency, BOOST, 1) }, worker));
       if (failed) throw failed;
       await flush();
       report(true);

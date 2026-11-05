@@ -7,6 +7,7 @@ const os = require("os");
 const fs = require("fs");
 const dl = require("./downloader");
 const edition = require("./edition");
+const capture = require("./capture");
 
 let guestSes, getWin, isAd;
 const states = new Map();     // id scheda (webContents) -> { items, hidden, reqHdr }
@@ -135,7 +136,7 @@ function list(id) {
   return [...st.items.values()].filter(i => i.ready)
     .sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "hls" ? -1 : b.kind === "hls" ? 1 : 0) || (b.size - a.size))
     .map(i => ({
-      id: i.id, kind: i.kind, label: i.label, host: hostOf(i.url), size: i.size, drm: i.drm || "", live: !!i.live, src: i.src,
+      id: i.id, kind: i.kind, label: i.label, host: hostOf(i.kind === "mse" ? pageUrl(i.wcId) : i.url), size: i.size, drm: i.drm || "", live: !!i.live, src: i.src,
       isMp3: i.kind === "audio" && /\.mp3(\?|#|$)/i.test(i.url)
     }));
 }
@@ -302,7 +303,7 @@ async function startDownload(it, level, sender, mode) {
   jobs.set(id, { signal, file: r.filePath });
   const send = x => { if (!sender.isDestroyed()) sender.send("vid:dl", Object.assign({ id, name }, x)); };
   const ex = dl.expiryOf(it.url), left = ex ? Math.round((ex - Date.now()) / 1000) : null;
-  send({ pct: 0, text: edition.demo ? "DEMO: salvo l'" + Math.round(edition.fraction * 100) + "% del video" : left != null && left < 900 ? "⚠ link a tempo (" + Math.max(left, 0) + " s): lascia il video in riproduzione nella scheda" : "parto" });
+  send({ boostable: it.kind === "hls", pct: 0, text: edition.demo ? "DEMO: salvo l'" + Math.round(edition.fraction * 100) + "% del video" : left != null && left < 900 ? "⚠ link a tempo (" + Math.max(left, 0) + " s): lascia il video in riproduzione nella scheda" : "parto" });
   if (left != null) dbg("⏱ il link scade " + (left > 0 ? "tra " + left + " s" : "già " + (-left) + " s fa") + " (alle " + dl.hhmmss(ex) + "): se serve, ne prendo uno nuovo dalla pagina");
   dbg("⬇ download #" + id + " " + (mp3 ? "MP3" : it.kind) + " → " + r.filePath + "\n    sorgente: " + it.url + "\n    pagina: " + (it.ref || "-") + "\n    intestazioni: " + JSON.stringify(dl.maskH(hdrs(it))));
   (async () => {
@@ -327,6 +328,7 @@ async function startDownload(it, level, sender, mode) {
 function init(opts) {
   guestSes = opts.guestSes; getWin = opts.getWin; isAd = opts.isAd;
   dl.setLogger(dbg);
+  capture.registerEarly(guestSes, app.getPath("userData"), dbg);
   try { logFile = path.join(app.getPath("userData"), "video-debug.log"); fs.writeFileSync(logFile, ""); } catch (_) {}
   ipcMain.handle("dbg:get", () => logLines.slice(-400).join("\n"));
   ipcMain.handle("dbg:open", () => { if (logFile) shell.showItemInFolder(logFile); return logFile; });
@@ -346,6 +348,11 @@ function init(opts) {
   // pausa / riprendi / annulla / mostra nella cartella, per ogni download
   ipcMain.handle("vid:ctl", (_e, id, action) => {
     const j = jobs.get(id); if (!j) return false;
+    if (/^boost:/.test(action)) { if (j.signal.setBoost) j.signal.setBoost(action === "boost:1"); return true; }
+    if (j.cap && (action === "save" || action === "cancel" || /^speed:/.test(action))) {
+      if (action === "save") j.cap.save(); else if (action === "cancel") j.cap.cancel(); else j.cap.speed(action.slice(6));
+      return true;
+    }
     if (action === "pause") { j.signal.paused = true; dbg("⏸ download #" + id + " in pausa"); }
     else if (action === "resume") { j.signal.paused = false; dbg("▶ download #" + id + " riparte"); }
     else if (action === "cancel") {
@@ -356,14 +363,42 @@ function init(opts) {
     else if (action === "remove") jobs.delete(id);
     return true;
   });
+  // cattura dal player della pagina (quando non c'è un link da scaricare)
+  ipcMain.handle("vid:capture", async (e, id) => {
+    const it = byId(id);
+    if (!it || it.kind !== "mse") return { error: "Elemento non trovato" };
+    const wc = guests.get(it.wcId);
+    if (!wc || wc.isDestroyed()) return { error: "La scheda non c'è più" };
+    const sender = e.sender, jid = nextJob++, title = niceTitle({ title: pageTitle(it.wcId), url: pageUrl(it.wcId) });
+    const send = x => { if (!sender.isDestroyed()) sender.send("vid:dl", Object.assign({ id: jid, name: "Cattura: " + title }, x)); };
+    jobs.set(jid, { signal: { aborted: false, paused: false, aborts: new Set() }, file: null, cap: null });
+    const r = await capture.start({
+      wc, send, dbg, title, outDir: app.getPath("downloads"), demoSecs: edition.demo ? edition.recSecs : 0,
+      onFile: f => { const j = jobs.get(jid); if (j) j.file = f; shell.showItemInFolder(f); }
+    });
+    if (r.error) { jobs.delete(jid); return { error: r.error }; }
+    jobs.get(jid).cap = r;
+    return { started: true, id: jid };
+  });
   ipcMain.handle("vid:dl-player", (e, level, mode) => startDownload(playerItems.get(e.sender.id), level, e.sender, mode));
+}
+
+// il player della pagina usa MSE: offro la cattura anche se non c'è nessun link da scaricare
+function noteMse(wcId, mime) {
+  const st = S(wcId);
+  if (st.items.has("mse") || st.hidden.has("mse")) return;
+  st.items.set("mse", { id: nextId++, wcId, kind: "mse", url: "mse://" + wcId, ref: pageUrl(wcId), src: "player", size: 0,
+    label: "▶ Player della pagina · cattura mentre guardi", ready: true, drm: "", live: false });
+  dbg("🎞 il player della pagina usa MSE (" + mime + "): cattura disponibile");
+  notify();
 }
 
 function onGuest(wc) {
   const id = wc.id;
   guests.set(id, wc);
   wc.on("did-navigate", () => reset(id));
+  capture.install(wc);
   wc.on("destroyed", () => { guests.delete(id); states.delete(id); if (activeId === id) activeId = null; });
 }
 
-module.exports = { init, onGuest, addScraped, _open: open };
+module.exports = { init, onGuest, addScraped, noteMse, _open: open };

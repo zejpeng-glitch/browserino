@@ -1,11 +1,12 @@
 "use strict";
-const { app, BrowserWindow, ipcMain, session, Menu, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, session, Menu, shell, clipboard } = require("electron");
 const IS_MAC = process.platform === "darwin";
 const path = require("path");
 const fs = require("fs");
 const videos = require("./videos");
 const recorder = require("./recorder");
 const edition = require("./edition");
+const ctxMenu = require("./contextmenu");
 
 let win;
 const cfgFile = () => path.join(app.getPath("userData"), "browserino.json");
@@ -30,6 +31,34 @@ function tell(kind, detail) {
   if (win && !win.isDestroyed()) win.webContents.send("blocked", { n: blockedCount, kind, detail });
 }
 
+// trasforma le voci di contextmenu.js in un menu vero
+function popup(items, wc, p, openTab) {
+  const tpl = items.map(it => {
+    if (it.sep) return { type: "separator" };
+    return {
+      label: it.label, enabled: it.enabled !== false,
+      click: () => {
+        try {
+          switch (it.act) {
+            case "newtab": openTab(it.arg); break;
+            case "copytext": clipboard.writeText(it.arg); break;
+            case "cut": wc.cut(); break;
+            case "copy": wc.copy(); break;
+            case "paste": wc.paste(); break;
+            case "selectAll": wc.selectAll(); break;
+            case "back": wc.goBack(); break;
+            case "fwd": wc.goForward(); break;
+            case "reload": wc.reload(); break;
+            case "inspect": wc.inspectElement(p.x, p.y); break;
+            case "pastego": { const t = clipboard.readText().trim(); if (t && win && !win.isDestroyed()) win.webContents.send("pastego", t); break; }
+          }
+        } catch (e) {}
+      }
+    };
+  });
+  if (tpl.length) Menu.buildFromTemplate(tpl).popup({ window: win });
+}
+
 function setupGuest(wc) {
   let lastInput = -1e9;
   const now = () => Date.now();
@@ -52,8 +81,14 @@ function setupGuest(wc) {
     return { action: "deny" };
   });
 
+  // clic destro nella pagina
+  wc.on("context-menu", (_e, p) => {
+    const items = ctxMenu.pageMenu(p, { canBack: wc.canGoBack(), canFwd: wc.canGoForward() });
+    popup(items, wc, p, url => { if (win && !win.isDestroyed()) win.webContents.send("newtab", url, true); });
+  });
+
   // scorciatoie anche quando il focus è dentro la pagina
-  const FWD = new Set(["ctrl+t", "ctrl+w", "ctrl+tab", "ctrl+shift+tab", "ctrl+l", "ctrl+d", "ctrl+j", "ctrl+shift+r", "f5", "alt+arrowleft", "alt+arrowright",
+  const FWD = new Set(["ctrl+t", "ctrl+w", "ctrl+tab", "ctrl+shift+tab", "ctrl+l", "ctrl+d", "ctrl+j", "ctrl+shift+r", "ctrl+shift+b", "f5", "alt+arrowleft", "alt+arrowright",
     "ctrl+1", "ctrl+2", "ctrl+3", "ctrl+4", "ctrl+5", "ctrl+6", "ctrl+7", "ctrl+8", "ctrl+9"]);
   wc.on("before-input-event", (e, input) => {
     if (input.type !== "keyDown") return;
@@ -79,7 +114,9 @@ function setupGuest(wc) {
   videos.onGuest(wc);
   wc.on("console-message", (e, _lvl, msg) => {
     if (typeof msg !== "string") msg = (e && e.message) || ""; // Electron nuovi: il messaggio sta nell'evento
-    if (msg.startsWith("__BN__:found:")) {
+    if (msg.startsWith("__BN__:mse:")) {
+      try { videos.noteMse(wc.id, msg.slice(11)); } catch (_) {}
+    } else if (msg.startsWith("__BN__:found:")) {
       try { videos.addScraped(wc.id, JSON.parse(msg.slice(13))); } catch (_) {}
     } else if (msg === "__BN__:playing") {
       // video grande partito dopo un tuo gesto: schermo intero
@@ -121,6 +158,11 @@ app.whenReady().then(() => {
     webPreferences: { preload: path.join(__dirname, "preload.js"), webviewTag: true, contextIsolation: true, nodeIntegration: false }
   });
   win.loadFile(path.join(__dirname, "ui", "index.html"));
+  // clic destro sulla barra indirizzi e sugli altri campi dell'interfaccia
+  win.webContents.on("context-menu", (_e, p) => {
+    if (!p.isEditable) return;
+    popup(ctxMenu.addrMenu(p), win.webContents, p, () => {});
+  });
 
   app.on("web-contents-created", (_e, wc) => { if (wc.getType() === "webview") setupGuest(wc); });
 

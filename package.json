@@ -1,6 +1,6 @@
 {
   "name": "browserino-pc",
-  "version": "1.4.1",
+  "version": "1.4.3",
   "description": "Browserino per PC e Mac: browser pulito, senza popup e salti di pagina, con modalità player, schede, download video e registratore audio",
   "main": "main.js",
   "scripts": {

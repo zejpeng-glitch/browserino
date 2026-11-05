@@ -13,6 +13,10 @@ Un piccolo browser per PC (Windows e Mac, basato su Electron) pensato per guarda
   - **▶ Guarda**: apre il video in un player pulito.
   - **⬇ Scarica**: salva il file; gli HLS vengono uniti in mp4. Gestisce link che scadono (li rinnova guardando la pagina), riprova se la rete balbetta, scarica in parallelo.
   - **🎵 MP3**: ricava solo l'audio.
+  - **⏺ Cattura**: se un sito non mostra nessun link scaricabile, copia il video mentre il player della pagina lo riproduce (anche accelerato ×2, ×4, ×8) e lo salva in un file. Non funziona con i DRM.
+  - **⚡ Boost**: sui download HLS, il pulsante ⚡ porta le richieste in parallelo da 6 a 16 (se il sito rifiuta, torna da solo a un ritmo più basso).
+  - **Barra dei preferiti** sotto l'indirizzo (Ctrl+Maiusc+B la nasconde); clic centrale o Ctrl+clic = nuova scheda, clic destro = menu.
+  - **Clic destro** ovunque: incolla, copia, apri link in nuova scheda, "Incolla e vai" nella barra indirizzi.
   - Ogni download ha la sua riga con **pausa, riprendi e annulla**.
 - **⏺ REC** (Ctrl+Maiusc+R): registra l'audio che esce dalle casse.
 - **🐞 Log**: mostra cosa succede durante un download, utile quando qualcosa va storto.
@@ -20,7 +24,7 @@ Un piccolo browser per PC (Windows e Mac, basato su Electron) pensato per guarda
 ## Cosa NON fa
 
 - **Non aggira i DRM.** Netflix, Prime, Disney+ e simili restano protetti e vengono rifiutati con un messaggio chiaro.
-- Non scarica dirette (live).
+- Non scarica dirette (live). La cattura registra solo quello che il player riproduce mentre è attiva.
 - Non scarica link scaduti che la pagina non rinnova.
 
 Usalo solo su contenuti che hai il diritto di scaricare o registrare. Chi lo usa è responsabile di come lo usa.

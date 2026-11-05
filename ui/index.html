@@ -18,6 +18,13 @@ button:hover{background:#2d3650}button:disabled{opacity:.35}button.on{background
 #addr{flex:1;height:34px;border-radius:8px;border:1px solid var(--line);background:#0b0e14;color:var(--tx);padding:0 12px;font:inherit}
 #shield{min-width:64px;font-size:13px}
 #stage{position:relative;flex:1}
+#favbar{display:flex;gap:4px;align-items:center;padding:3px 10px;background:var(--bar);border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap}
+#favbar::-webkit-scrollbar{height:0}body.player #favbar{display:none}
+.fchip{display:flex;align-items:center;gap:6px;max-width:170px;height:26px;padding:0 9px;border-radius:7px;color:var(--tx);font-size:13px;cursor:pointer;flex:0 0 auto}
+.fchip:hover{background:#2d3650}.fchip span{overflow:hidden;text-overflow:ellipsis}.fchip img{width:14px;height:14px;border-radius:3px}
+.fempty{color:var(--mut);font-size:12px}
+#cmenu{position:fixed;z-index:60;min-width:190px;background:#1b2232;border:1px solid var(--line);border-radius:9px;padding:4px;box-shadow:0 10px 30px #000b}
+#cmenu div{padding:7px 12px;border-radius:6px;cursor:pointer;font-size:13px}#cmenu div:hover{background:#2d3650}
 webview{position:absolute;inset:0;width:100%;height:100%;background:#fff}
 webview.bg{visibility:hidden;pointer-events:none}
 #home{position:absolute;inset:0;padding:40px 8vw;overflow:auto}
@@ -43,6 +50,7 @@ webview.bg{visibility:hidden;pointer-events:none}
 .dtop button{min-width:32px;height:28px;font-size:13px}
 .dbar{height:5px;border-radius:3px;background:#232a3a;margin:7px 0 4px;overflow:hidden}.dbar i{display:block;height:100%;width:0;background:#4c8dff;transition:width .3s}
 .drow.done .dbar i{background:#2f7d4f}.drow.err .dbar i{background:var(--ac)}.drow.paused .dbar i{background:#8a5a00}
+.drow.capture .dbar i,.drow.saving .dbar i{width:100%!important;background:#2b6a4a;animation:bnp 1.4s ease-in-out infinite}@keyframes bnp{50%{opacity:.35}}
 .dtxt{color:var(--mut);font-size:12px;line-height:1.35}
 #vlogbar{display:flex;gap:8px;align-items:center;margin:6px 0}#vlogbar span{color:var(--mut);font-size:12px}
 #vlog{width:100%;height:36vh;background:#05070b;color:#b8c2d6;border:1px solid var(--line);border-radius:8px;padding:8px;font:12px/1.35 Consolas,monospace;resize:vertical;white-space:pre}
@@ -65,6 +73,7 @@ webview.bg{visibility:hidden;pointer-events:none}
     <button id="vid" title="Video trovati nella pagina: player pulito e download">🎬 0</button>
     <button id="shield" title="Pubblicità e popup bloccati">🛡 0</button>
   </div>
+  <div id="favbar" class="hide"></div>
   <div id="stage">
     <div id="home">
       <h1>Brow<b>serino</b></h1><p>Preferiti. Clic per aprire, ✕ per toglierli.</p>

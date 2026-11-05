@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld("bn", {
   onVideos: cb => ipcRenderer.on("videos", (_e, l) => cb(l)),
   vidPlay: id => ipcRenderer.invoke("vid:play", id),
   vidDownload: (id, mode) => ipcRenderer.invoke("vid:dl", id, mode || "video"),
+  vidCapture: id => ipcRenderer.invoke("vid:capture", id),
   vidCtl: (id, action) => ipcRenderer.invoke("vid:ctl", id, action),
   onDl: cb => ipcRenderer.on("vid:dl", (_e, d) => cb(d)),
   // debug video
@@ -18,6 +19,7 @@ contextBridge.exposeInMainWorld("bn", {
   onDbg: cb => ipcRenderer.on("dbg", (_e, l) => cb(l)),
   // schede
   vidActive: id => ipcRenderer.invoke("vid:active", id),
+  onPasteGo: cb => ipcRenderer.on("pastego", (_e, t) => cb(t)),
   onNewTab: cb => ipcRenderer.on("newtab", (_e, url, fg) => cb(url, fg)),
   onShortcut: cb => ipcRenderer.on("shortcut", (_e, c) => cb(c)),
   // registratore audio di sistema
