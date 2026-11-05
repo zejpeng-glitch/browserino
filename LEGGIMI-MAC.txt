@@ -1,0 +1,29 @@
+BROWSERINO PER MAC
+
+Il codice è lo stesso del PC (stessa cartella). Su Mac cambia solo come si costruisce e qualche permesso.
+
+PROVARLO SUBITO (sul Mac)
+  1. Installa Node.js (nodejs.org) e, per mp3/unione video, ffmpeg:  brew install ffmpeg
+  2. Copia la cartella BrowserinoPC sul Mac (senza node_modules e dist), poi nel Terminale:
+        cd percorso/BrowserinoPC
+        npm install
+        npm start
+
+COSTRUIRE L'APP (.dmg)   [per la demo: npm run dist:mac-demo, vedi LEGGIMI-DEMO.txt]
+  Sul Mac:   npm run dist:mac        (Mac con chip Apple: dist:mac-arm, Mac Intel: dist:mac-intel)
+  Il .dmg compare nella cartella dist. Non si può costruire da Windows: serve un Mac.
+  Senza un Mac: il file .github/workflows/build-mac.yml lo costruisce su GitHub (Actions -> Build Mac).
+
+PRIMA APERTURA
+  L'app non è firmata con un account Apple a pagamento, quindi macOS la blocca la prima volta:
+  tasto destro sull'app -> Apri -> Apri. Se dice "è danneggiata":   xattr -cr /Applications/Browserino.app
+
+SCORCIATOIE: su Mac Ctrl diventa Cmd (Cmd+T nuova scheda, Cmd+W chiudi, Cmd+L, Cmd+J, Cmd+Maiusc+R registra...).
+
+REGISTRATORE AUDIO (REC)
+  - Serve macOS 14.2 o più recente. Prima volta: concedi "Registrazione schermo e audio di sistema"
+    in Impostazioni di Sistema > Privacy e sicurezza, poi riapri Browserino.
+  - Se il permesso manca, la registrazione parte ma il file resta vuoto, senza errori.
+
+RAM: le schede in background vanno a dormire dopo 10 minuti (💤) e si risvegliano quando le apri.
+     Le schede con audio acceso non dormono.

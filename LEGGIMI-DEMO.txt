@@ -1,0 +1,28 @@
+VERSIONE DEMO E VERSIONE COMPLETA
+
+Il codice è lo stesso: cambia solo cosa esce dall'installer.
+
+COSTRUIRLE (sul PC, nella cartella BrowserinoPC)
+  npm run dist           -> versione completa    (dist\Browserino-Setup-x.y.z.exe)
+  npm run dist:demo      -> versione demo        (dist\Browserino-Demo-Setup-x.y.z.exe)
+  Su Mac: npm run dist:mac-demo  /  dist:mac-demo-arm  /  dist:mac-demo-intel   (e dist:mac per la completa)
+  Le due app si installano insieme senza pestarsi i piedi (nome e identificativo diversi).
+  Lo script rimette da solo edition.json su "full" alla fine, quindi "npm start" resta sempre completo.
+
+COSA FA LA DEMO
+  - Download (video e MP3): salva l'80% del video. Il file si apre normalmente, ma senza il finale.
+  - REC: si ferma da solo e salva dopo 2 minuti.
+  - Un bottone arancione "🔓 DEMO" sempre visibile e un avviso nel pannello video lo dicono chiaramente.
+    Dopo ogni download compare la nota "Versione demo: salvato l'80%...". Non togliere questi avvisi: l'utente deve saperlo PRIMA.
+  - File diretti (.mp4 ecc.) e MP3 da file: la demo ha bisogno di ffmpeg per tagliare, senza ffmpeg si ferma con un messaggio.
+
+COSA SI CAMBIA FACILMENTE
+  - Percentuale e minuti: edition.js (fraction: 0.8, recSecs: 120).
+  - Indirizzo del bottone "DEMO": scrivi il link di acquisto in edition.json, campo "buyUrl" (deve iniziare con https://).
+    Finché è vuoto il bottone mostra "La versione completa sarà disponibile a breve".
+
+LIMITI ONESTI
+  - La demo contiene lo stesso codice della completa: chi sa aprire l'app (file app.asar) può togliere i limiti.
+    Ferma la gente comune, non chi è del mestiere.
+  - La versione completa, una volta data a qualcuno, può essere passata ad altri. Per frenarlo serve un codice di licenza online (da fare dopo).
+  - Mai provata dentro Electron vero: prova la demo con un download e un REC prima di darla a qualcuno.

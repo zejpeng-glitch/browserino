@@ -1,0 +1,17 @@
+BROWSERINO PC 1.2
+
+VIDEO (pulsante 🎬, Ctrl+J)
+ - Fai partire il video nella pagina (anche solo un secondo): il pulsante diventa verde col numero dei trovati.
+ - ▶ Guarda  -> player pulito, senza pubblicita' e popup
+ - ⬇        -> scarica il file (mp4 diretto, oppure m3u8 unito in mp4)
+ - 🎵 MP3   -> ricava solo l'audio in mp3 (anche da un video musicale). Serve ffmpeg.
+ - Trova anche file audio (.mp3, .m4a, .ogg...) quando la pagina li carica.
+ - Scansiona -> rilegge il codice della pagina cercando link .m3u8/.mp4/.mp3
+
+REGISTRATORE (pulsante ⏺ REC, Ctrl+Maiusc+R)
+ - Registra TUTTO l'audio che esce dalle casse del PC (come il loopback di Audacity), da quando premi.
+ - Premi ⏹ per fermare: il file va in Download (Registrazione AAAA-MM-GG hh-mm-ss.mp3).
+ - Senza ffmpeg salva in .wav.
+
+ffmpeg: lo cerca nel PATH, in Downloads\YT-DLP e accanto all'app.
+Non scarica: dirette, flussi con DRM, link scaduti.

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><title>Browserino · Player</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src * blob: data:; connect-src *; img-src * data: blob:">
+<style>
+:root{--ac:#e5484d;--tx:#f2f4f8;--mut:#9aa3b5}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#000;color:var(--tx);font:14px system-ui,Segoe UI,sans-serif;overflow:hidden}
+#wrap{position:relative;width:100%;height:100%;background:#000}
+video{width:100%;height:100%;object-fit:contain;background:#000;outline:none}
+#top{position:absolute;left:0;right:0;top:0;padding:14px 18px;background:linear-gradient(#000a,#0000);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .25s}
+#ctl{position:absolute;left:0;right:0;bottom:0;padding:26px 16px 12px;background:linear-gradient(#0000,#000c);transition:opacity .25s}
+#wrap.idle #ctl,#wrap.idle #top{opacity:0}#wrap.idle{cursor:none}
+#seekrow{display:flex;align-items:center;gap:10px}
+#time{font-variant-numeric:tabular-nums;color:var(--mut);min-width:108px;text-align:right;font-size:13px}
+#row{display:flex;align-items:center;gap:8px;margin-top:8px}
+button,select{background:#ffffff1c;color:var(--tx);border:0;border-radius:8px;height:34px;min-width:38px;font:inherit;font-size:15px;padding:0 10px;cursor:pointer}
+button:hover,select:hover{background:#ffffff35}select option{background:#171c26}
+.sp{flex:1}
+input[type=range]{-webkit-appearance:none;appearance:none;height:5px;border-radius:3px;background:#ffffff40;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--ac)}
+#seek{flex:1}#vol{width:90px}
+#msg{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);background:#000b;padding:14px 20px;border-radius:12px;max-width:80%;text-align:center;display:none;line-height:1.4}
+#dl{position:absolute;right:16px;top:14px;background:#000c;padding:7px 14px;border-radius:18px;font-size:13px;display:none}
+#spin{position:absolute;left:50%;top:50%;width:42px;height:42px;margin:-21px;border:4px solid #fff3;border-top-color:var(--ac);border-radius:50%;animation:r 0.9s linear infinite;display:none}
+@keyframes r{to{transform:rotate(360deg)}}
+</style></head><body>
+<div id="wrap">
+  <video id="v" playsinline></video>
+  <div id="top"></div><div id="spin"></div><div id="msg"></div><div id="dl"></div>
+  <div id="ctl">
+    <div id="seekrow"><input id="seek" type="range" min="0" max="1000" value="0"><span id="time">0:00 / 0:00</span></div>
+    <div id="row">
+      <button id="play" title="Play / Pausa (Spazio)">▶</button>
+      <button id="back" title="-10 s (←)">⏪ 10</button>
+      <button id="fwd" title="+10 s (→)">10 ⏩</button>
+      <button id="mute" title="Muto (M)">🔊</button>
+      <input id="vol" type="range" min="0" max="100" value="100">
+      <span class="sp"></span>
+      <select id="lvl" title="Qualità" style="display:none"></select>
+      <select id="spd" title="Velocità"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
+      <button id="save" title="Scarica il video">⬇ Scarica</button>
+      <button id="mp3" title="Ricava solo l'audio in mp3">🎵 MP3</button>
+      <button id="fs" title="Schermo intero (F)">⛶</button>
+    </div>
+  </div>
+</div>
+<script src="vendor/hls.min.js"></script>
+<script src="player.js"></script>
+</body></html>

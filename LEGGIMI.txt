@@ -1,0 +1,22 @@
+BROWSERINO PER PC
+=================
+Browser pulito: blocca popup, pubblicità e salti di pagina verso altri siti,
+mette a schermo intero i video grandi, ha i preferiti e la tastiera sul video.
+
+PROVARLO (serve Node.js da nodejs.org)
+  1. Apri PowerShell in questa cartella
+  2. npm install
+  3. npm start
+
+FARNE UN PROGRAMMA INSTALLABILE (.exe)
+  npm run dist      ->  nella cartella "dist" trovi "Browserino Setup ....exe"
+
+SCORCIATOIE
+  Ctrl+L  indirizzo      Ctrl+D  preferiti      F5  ricarica
+  Alt+←/→ indietro/avanti
+  Sul video grande: ← → ±10 s, ↑ ↓ volume, Spazio pausa, F schermo intero
+  Esc esce dallo schermo intero.
+  Pulsante "salti": blocca (rosso) o permette i cambi di pagina verso altri siti.
+
+NOTA: è una versione nuova scritta per PC, non la copia del Browserino della TV.
+La lista dei siti pubblicitari è in blocklist.json: puoi aggiungere domini.

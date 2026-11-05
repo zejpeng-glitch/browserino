@@ -1,0 +1,26 @@
+# Costruisce Browserino per Mac su un Mac in cloud di GitHub (serve solo se non hai un Mac a portata di mano).
+# Uso: su GitHub, scheda Actions -> "Build Mac" -> Run workflow. Alla fine scarichi il .dmg dagli "Artifacts".
+name: Build Mac
+on:
+  workflow_dispatch:
+    inputs:
+      edition:
+        description: "full (completa) oppure demo"
+        default: "full"
+jobs:
+  mac:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [arm64, x64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: node scripts/dist.js ${{ inputs.edition }} mac ${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Browserino-mac-${{ matrix.arch }}
+          path: dist/*.dmg

@@ -1,0 +1,58 @@
+{
+  "name": "browserino-pc",
+  "version": "1.4.1",
+  "description": "Browserino per PC e Mac: browser pulito, senza popup e salti di pagina, con modalità player, schede, download video e registratore audio",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "node scripts/dist.js full win",
+    "dist:demo": "node scripts/dist.js demo win",
+    "dist:mac": "node scripts/dist.js full mac",
+    "dist:mac-demo": "node scripts/dist.js demo mac",
+    "dist:mac-arm": "node scripts/dist.js full mac arm64",
+    "dist:mac-intel": "node scripts/dist.js full mac x64",
+    "dist:mac-demo-arm": "node scripts/dist.js demo mac arm64",
+    "dist:mac-demo-intel": "node scripts/dist.js demo mac x64"
+  },
+  "devDependencies": {
+    "electron": "^45.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.zei.browserino.pc",
+    "productName": "Browserino",
+    "afterPack": "scripts/adhoc-sign.js",
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "category": "public.app-category.video",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSAudioCaptureUsageDescription": "Browserino registra l'audio del computer quando premi REC."
+      }
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "ui/**",
+      "blocker.js",
+      "blocklist.json",
+      "videos.js",
+      "downloader.js",
+      "player.html",
+      "player.js",
+      "player-preload.js",
+      "recorder.js",
+      "edition.json",
+      "edition.js",
+      "vendor/**"
+    ]
+  }
+}
