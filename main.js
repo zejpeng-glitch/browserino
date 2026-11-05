@@ -1,5 +1,5 @@
 "use strict";
-const { app, BrowserWindow, ipcMain, session, Menu, shell, clipboard } = require("electron");
+const { app, BrowserWindow, ipcMain, session, Menu, shell, clipboard, webContents } = require("electron");
 const IS_MAC = process.platform === "darwin";
 const path = require("path");
 const fs = require("fs");
@@ -7,6 +7,8 @@ const videos = require("./videos");
 const recorder = require("./recorder");
 const edition = require("./edition");
 const ctxMenu = require("./contextmenu");
+const twitch = require("./twitchblock");
+const thumbs = require("./thumbs");
 
 let win;
 const cfgFile = () => path.join(app.getPath("userData"), "browserino.json");
@@ -31,6 +33,33 @@ function tell(kind, detail) {
   if (win && !win.isDestroyed()) win.webContents.send("blocked", { n: blockedCount, kind, detail });
 }
 
+// picture in picture: cerca il video grande della pagina (anche dentro gli iframe) e lo stacca / riattacca
+function pipJs(mode) {
+  // mode: "toggle" (pulsante), "enter" (automatico: solo se il video sta andando), "exit" (automatico: solo se è in finestrina)
+  const prep = "v.disablePictureInPicture=false;v.removeAttribute('disablepictureinpicture');await v.requestPictureInPicture();return 'on'";
+  const body = mode === "exit"
+    ? "if(document.pictureInPictureElement){await document.exitPictureInPicture();return 'off'}return 'none'"
+    : mode === "enter"
+      ? "if(document.pictureInPictureElement)return 'skip';var v=window.__bnBig&&window.__bnBig();if(!v||v.paused||v.ended)return 'none';" + prep
+      : "if(document.pictureInPictureElement){await document.exitPictureInPicture();return 'off'}var v=window.__bnBig&&window.__bnBig();if(!v)return 'none';" + prep;
+  return "(async function(){try{" + body + "}catch(e){return 'err:'+((e&&e.message)||e)}})()";
+}
+async function togglePip(wcId, mode) {
+  mode = mode || "toggle";
+  const wc = webContents.fromId(wcId);
+  if (!wc || wc.isDestroyed()) return "none";
+  let last = "none";
+  const frames = [wc.mainFrame].concat(wc.mainFrame.framesInSubtree || []).filter((f, i, a) => a.indexOf(f) === i);
+  for (const f of frames) {
+    try {
+      const r = await f.executeJavaScript(pipJs(mode), true);
+      if (r === "on" || r === "off" || r === "skip") return r;
+      if (r !== "none") last = r;
+    } catch (_) {}
+  }
+  return last;
+}
+
 // trasforma le voci di contextmenu.js in un menu vero
 function popup(items, wc, p, openTab) {
   const tpl = items.map(it => {
@@ -50,6 +79,7 @@ function popup(items, wc, p, openTab) {
             case "fwd": wc.goForward(); break;
             case "reload": wc.reload(); break;
             case "inspect": wc.inspectElement(p.x, p.y); break;
+            case "pip": togglePip(wc.id); break;
             case "pastego": { const t = clipboard.readText().trim(); if (t && win && !win.isDestroyed()) win.webContents.send("pastego", t); break; }
           }
         } catch (e) {}
@@ -88,7 +118,7 @@ function setupGuest(wc) {
   });
 
   // scorciatoie anche quando il focus è dentro la pagina
-  const FWD = new Set(["ctrl+t", "ctrl+w", "ctrl+tab", "ctrl+shift+tab", "ctrl+l", "ctrl+d", "ctrl+j", "ctrl+shift+r", "ctrl+shift+b", "f5", "alt+arrowleft", "alt+arrowright",
+  const FWD = new Set(["ctrl+t", "ctrl+w", "ctrl+tab", "ctrl+shift+tab", "ctrl+l", "ctrl+d", "ctrl+j", "ctrl+shift+r", "ctrl+shift+b", "ctrl+shift+p", "f5", "alt+arrowleft", "alt+arrowright",
     "ctrl+1", "ctrl+2", "ctrl+3", "ctrl+4", "ctrl+5", "ctrl+6", "ctrl+7", "ctrl+8", "ctrl+9"]);
   wc.on("before-input-event", (e, input) => {
     if (input.type !== "keyDown") return;
@@ -119,7 +149,9 @@ function setupGuest(wc) {
     } else if (msg.startsWith("__BN__:found:")) {
       try { videos.addScraped(wc.id, JSON.parse(msg.slice(13))); } catch (_) {}
     } else if (msg === "__BN__:playing") {
-      // video grande partito dopo un tuo gesto: schermo intero
+      // Lo schermo intero automatico ora è spento (si usa il pulsante del player o il tasto F).
+      // Chi lo rivuole: nel file di configurazione browserino.json mettere "autoFullscreen": true
+      if (cfg.autoFullscreen !== true) return;
       wc.executeJavaScript(
         "(function(){var v=window.__bnBig&&window.__bnBig();if(v&&!document.fullscreenElement){(v.requestFullscreen||v.webkitRequestFullscreen).call(v)}})()", true).catch(() => {});
     } else if (msg.startsWith("__BN__:blocked:")) tell("pagina", msg.slice(15));
@@ -151,6 +183,11 @@ app.whenReady().then(() => {
   const guestSes = session.fromPartition("persist:browserino");
   setupSession(guestSes);
   videos.init({ guestSes, getWin: () => win, isAd });
+  const twDbg = m => { try { console.log(m); } catch (_) {} };
+  twitch.set(guestSes, app.getPath("userData"), cfg.twitchAdblock !== false, twDbg);
+  ipcMain.handle("thumb:make", async (_e, url) => { try { return { ok: true, data: await thumbs.make(url, guestSes) }; } catch (e) { return { ok: false, err: (e && e.message) || String(e) }; } });
+  ipcMain.handle("pip", (_e, id, mode) => togglePip(id, mode));
+  ipcMain.handle("twitch:set", (_e, on) => { cfg.twitchAdblock = !!on; saveCfg(cfg); return twitch.set(guestSes, app.getPath("userData"), !!on, twDbg); });
   recorder.init();
 
   win = new BrowserWindow({

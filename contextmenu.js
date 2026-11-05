@@ -21,6 +21,7 @@ function pageMenu(p, st) {
     out.push({ label: "Copia indirizzo immagine", act: "copytext", arg: p.srcURL });
     sep();
   }
+  if (p.mediaType === "video") { out.push({ label: "Picture in picture", act: "pip" }); sep(); }
   if ((p.mediaType === "video" || p.mediaType === "audio") && p.srcURL && /^https?:/i.test(p.srcURL)) {
     out.push({ label: "Copia indirizzo " + (p.mediaType === "video" ? "video" : "audio"), act: "copytext", arg: p.srcURL });
     sep();

@@ -1,6 +1,6 @@
 "use strict";
 var $ = function (id) { return document.getElementById(id); };
-var addr = $("addr"), cfg = { favs: [], blockJump: true, favbar: true, last: "" };
+var addr = $("addr"), cfg = { favs: [], blockJump: true, favbar: true, twitch: true, autoPip: ["twitch.tv", "youtube.com"], last: "" };
 var tabs = [], cur = null, view = null, tabSeq = 1;
 var IS_MAC = /Mac/i.test(navigator.platform);
 var toastT;
@@ -13,7 +13,7 @@ function norm(s) {
   if (/^[^\s]+\.[^\s]{2,}(\/.*)?$/.test(s)) return "https://" + s;
   return "https://www.google.com/search?q=" + encodeURIComponent(s);
 }
-function save() { window.bn.setCfg({ favs: cfg.favs, blockJump: cfg.blockJump, favbar: cfg.favbar }); drawFavBar(); }
+function save() { window.bn.setCfg({ favs: cfg.favs, blockJump: cfg.blockJump, favbar: cfg.favbar, autoPip: cfg.autoPip }); drawFavBar(); }
 
 // ---------------- schede ----------------
 function tabLabel(t) {
@@ -54,7 +54,8 @@ function newTab(url, activate) {
   return t;
 }
 function select(t) {
-  if (cur && cur !== t) cur.last = Date.now();
+  if (cur && cur !== t) { cur.last = Date.now(); autoPip(cur, true); }
+  if (t.autoPipOn) autoPip(t, false);
   if (t.sleeping) wakeTab(t);
   cur = t; view = t.view; t.last = Date.now();
   tabs.forEach(function (x) { if (x.view) x.view.classList.toggle("bg", x !== t || x.home); });
@@ -109,7 +110,7 @@ function wakeTab(t) {
 }
 setInterval(function () {
   var now = Date.now();
-  tabs.forEach(function (t) { if (t !== cur && !t.sleeping && !t.home && now - t.last > SLEEP_MS) sleepTab(t); });
+  tabs.forEach(function (t) { if (t !== cur && !t.sleeping && !t.home && !t.autoPipOn && now - t.last > SLEEP_MS) sleepTab(t); });
 }, 60000);
 
 function wire(t) {
@@ -132,17 +133,62 @@ function wire(t) {
 }
 
 // ---------------- barra e preferiti ----------------
+// ---- preferiti: spostamento con il trascinamento + anteprima ----
+var dragFrom = -1;
+function moveFav(from, to) {
+  if (from < 0 || to < 0 || from === to || from >= cfg.favs.length) return;
+  var f = cfg.favs.splice(from, 1)[0]; cfg.favs.splice(to, 0, f);
+  save(); drawTiles(); refreshFav();
+}
+function dragWire(el, i, cls) {
+  el.draggable = true;
+  el.ondragstart = function (e) { dragFrom = i; el.classList.add("drag"); e.dataTransfer.effectAllowed = "move"; try { e.dataTransfer.setData("text/plain", String(i)); } catch (x) {} };
+  el.ondragend = function () { dragFrom = -1; el.classList.remove("drag"); document.querySelectorAll(".over").forEach(function (n) { n.classList.remove("over"); }); };
+  el.ondragover = function (e) { if (dragFrom < 0) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; el.classList.add("over"); };
+  el.ondragleave = function () { el.classList.remove("over"); };
+  el.ondrop = function (e) { e.preventDefault(); el.classList.remove("over"); moveFav(dragFrom, i); dragFrom = -1; };
+}
+function makeThumb(i) {
+  var f = cfg.favs[i]; if (!f) return;
+  var tile = $("tiles").children[i]; if (tile) tile.classList.add("busy");
+  toast("Carico l'anteprima di " + (f.title || hostName(f.url)) + "…", 4000);
+  window.bn.thumb(f.url).then(function (r) {
+    var g = cfg.favs.filter(function (x) { return x.url === f.url; })[0];
+    if (r && r.ok && g) { g.thumb = r.data; save(); toast("Anteprima pronta"); }
+    else toast("Non sono riuscito a fare l'anteprima" + (r && r.err ? " (" + r.err + ")" : ""), 4000);
+    drawTiles();
+  });
+}
+function favMenu(i) {
+  var f = cfg.favs[i];
+  var items = [
+    ["Apri in una nuova scheda", function () { newTab(f.url, true); }],
+    ["Rinomina…", function () { renameFav(i); }],
+    [f.thumb ? "Aggiorna anteprima" : "Carica anteprima", function () { makeThumb(i); }]
+  ];
+  if (f.thumb) items.push(["Togli anteprima", function () { delete f.thumb; save(); drawTiles(); }]);
+  items.push(["Copia indirizzo", function () { navigator.clipboard.writeText(f.url).then(function () { toast("Copiato"); }); }]);
+  items.push(["Rimuovi dai preferiti", function () { cfg.favs.splice(i, 1); save(); drawTiles(); refreshFav(); }]);
+  return items;
+}
 function drawTiles() {
   var t = $("tiles"); t.innerHTML = "";
   if (!cfg.favs.length) { t.innerHTML = '<p style="color:#8b94a7">Ancora nessun preferito. Apri un sito e premi ☆.</p>'; }
   cfg.favs.forEach(function (f, i) {
-    var d = document.createElement("div"); d.className = "tile";
+    var d = document.createElement("div"); d.className = "tile" + (f.thumb ? " th" : "");
+    if (f.thumb) { var im = document.createElement("img"); im.className = "ti"; im.src = f.thumb; im.draggable = false; d.appendChild(im); }
+    var box = document.createElement("div"); box.className = "tx";
     var b = document.createElement("b"); b.textContent = f.title || f.url;
     var s = document.createElement("span"); s.textContent = f.url;
     var x = document.createElement("i"); x.textContent = "✕";
     x.onclick = function (e) { e.stopPropagation(); cfg.favs.splice(i, 1); save(); drawTiles(); };
     d.onclick = function () { go(f.url); };
-    d.appendChild(x); d.appendChild(b); d.appendChild(s); t.appendChild(d);
+    d.onauxclick = function (e) { if (e.button === 1) { e.preventDefault(); newTab(f.url, false); toast("Aperto in una nuova scheda"); } };
+    d.oncontextmenu = function (e) { e.preventDefault(); showMenu(e.clientX, e.clientY, favMenu(i)); };
+    dragWire(d, i);
+    box.appendChild(b); box.appendChild(s);
+    if (f.thumb) { d.appendChild(box); d.appendChild(x); } else { d.appendChild(x); d.appendChild(b); d.appendChild(s); }
+    t.appendChild(d);
   });
 }
 function drawFavBar() {
@@ -155,16 +201,26 @@ function drawFavBar() {
     var s = document.createElement("span"); s.textContent = f.title || hostName(f.url); c.appendChild(s);
     c.onclick = function (e) { if (e.ctrlKey || e.metaKey) newTab(f.url, false); else go(f.url); };
     c.onauxclick = function (e) { if (e.button === 1) { e.preventDefault(); newTab(f.url, false); toast("Aperto in una nuova scheda"); } };
-    c.oncontextmenu = function (e) {
-      e.preventDefault();
-      showMenu(e.clientX, e.clientY, [
-        ["Apri in una nuova scheda", function () { newTab(f.url, true); }],
-        ["Copia indirizzo", function () { navigator.clipboard.writeText(f.url).then(function () { toast("Copiato"); }); }],
-        ["Rimuovi dai preferiti", function () { cfg.favs.splice(i, 1); save(); drawTiles(); refreshFav(); }]
-      ]);
-    };
+    c.oncontextmenu = function (e) { e.preventDefault(); showMenu(e.clientX, e.clientY, favMenu(i)); };
+    dragWire(c, i);
     b.appendChild(c);
   });
+}
+function renameFav(i) {
+  var f = cfg.favs[i]; if (!f) return;
+  var m = document.createElement("div"); m.id = "cmenu"; closeMenu();
+  m.style.cssText = "left:50%;top:30%;transform:translateX(-50%);padding:12px;width:min(360px,90vw)";
+  var inp = document.createElement("input"); inp.value = f.title || hostName(f.url); inp.spellcheck = false;
+  inp.style.cssText = "width:100%;height:34px;border-radius:8px;border:1px solid var(--line);background:#0b0e14;color:var(--tx);padding:0 10px;font:inherit";
+  var hint = document.createElement("div"); hint.textContent = "Invio per salvare, Esc per annullare. Vuoto = nome originale del sito."; hint.style.cssText = "color:var(--mut);font-size:12px;padding:6px 2px 0;cursor:default";
+  m.appendChild(inp); m.appendChild(hint); document.body.appendChild(m);
+  function done(ok) {
+    if (ok) { var v = inp.value.trim(); if (v) { f.title = v; f.custom = true; } else { delete f.custom; f.title = hostName(f.url); } save(); drawTiles(); }
+    m.remove();
+  }
+  inp.onkeydown = function (e) { e.stopPropagation(); if (e.key === "Enter") done(true); else if (e.key === "Escape") done(false); };
+  inp.onblur = function () { setTimeout(function () { if (document.body.contains(m)) done(true); }, 0); };
+  inp.focus(); inp.select();
 }
 function showMenu(x, y, items) {
   closeMenu();
@@ -200,6 +256,53 @@ $("fav").onclick = function () {
   save(); refreshFav();
 };
 $("jump").onclick = function () { cfg.blockJump = !cfg.blockJump; save(); drawJump(); toast(cfg.blockJump ? "Salti di pagina bloccati" : "Salti di pagina permessi"); };
+// PiP automatico per sito: quando lasci la scheda (o minimizzi) con un video che sta andando
+function pipSite(u) { var h = hostName(u).replace(/^(www|m)\./, ""); return h; }
+function pipOnFor(u) {
+  var h = hostName(u);
+  return cfg.autoPip.some(function (e) { return h === e || h.endsWith("." + e); });
+}
+function autoPip(t, enter) {
+  if (!t || t.home || !t.wcId || !t.url) return;
+  if (enter) {
+    if (!pipOnFor(t.url)) return;
+    window.bn.pip(t.wcId, "enter").then(function (r) { if (r === "on") t.autoPipOn = true; });
+  } else if (t.autoPipOn) {
+    t.autoPipOn = false;
+    window.bn.pip(t.wcId, "exit");
+  }
+}
+document.addEventListener("visibilitychange", function () { autoPip(cur, document.hidden); });
+$("pip").oncontextmenu = function (e) {
+  e.preventDefault();
+  var u = cur && !cur.home ? cur.url : "";
+  var items = [];
+  if (u) {
+    var site = pipSite(u), on = pipOnFor(u);
+    items.push([(on ? "✓ " : "") + "PiP automatico su " + site, function () {
+      if (on) cfg.autoPip = cfg.autoPip.filter(function (x) { var h = hostName(u); return !(h === x || h.endsWith("." + x)); });
+      else cfg.autoPip.push(site);
+      save(); toast(on ? "PiP automatico spento per " + site : "PiP automatico acceso per " + site + ": parte quando lasci la scheda o minimizzi");
+    }]);
+  }
+  items.push(["Siti con PiP automatico: " + (cfg.autoPip.join(", ") || "nessuno"), function () {}]);
+  var r = $("pip").getBoundingClientRect(); showMenu(Math.max(6, r.left - 120), r.bottom + 4, items);
+};
+function doPip() {
+  if (!cur || cur.home || !cur.wcId) { toast("Apri prima una pagina con un video"); return; }
+  window.bn.pip(cur.wcId).then(function (r) {
+    if (r === "on") toast("Video in finestrina. Premi di nuovo per rimetterlo qui");
+    else if (r === "off") toast("Video rimesso nella pagina");
+    else if (r === "none") toast("Non trovo un video in questa pagina (fallo partire prima)");
+    else toast("Il sito non lo permette (" + String(r).replace(/^err:/, "") + ")", 4000);
+  });
+}
+$("pip").onclick = doPip;
+function drawTw() { $("tw").classList.toggle("on", cfg.twitch !== false); }
+$("tw").onclick = function () {
+  cfg.twitch = cfg.twitch === false; drawTw(); window.bn.twitchSet(cfg.twitch);
+  toast(cfg.twitch ? "Blocco pubblicità Twitch acceso: ricarica la pagina di Twitch" : "Blocco pubblicità Twitch spento");
+};
 function drawJump() { $("jump").classList.toggle("on", !!cfg.blockJump); }
 
 window.bn.onBlocked(function (d) {
@@ -344,6 +447,7 @@ function shortcut(c) {
     case "ctrl+shift+tab": select(tabs[(tabs.indexOf(cur) - 1 + tabs.length) % tabs.length]); return true;
     case "ctrl+l": addr.focus(); addr.select(); return true;
     case "ctrl+d": $("fav").click(); return true;
+    case "ctrl+shift+p": doPip(); return true;
     case "ctrl+shift+b": cfg.favbar = cfg.favbar === false; save(); return true;
     case "ctrl+j": $("vid").click(); return true;
     case "ctrl+shift+r": $("rec").click(); return true;
@@ -362,8 +466,8 @@ document.addEventListener("keydown", function (e) {
 
 newTab(null, true);
 window.bn.getCfg().then(function (c) {
-  cfg.favs = c.favs || []; cfg.blockJump = c.blockJump !== false; cfg.favbar = c.favbar !== false;
-  drawJump(); drawTiles(); drawFavBar(); refreshNav();
+  cfg.favs = c.favs || []; cfg.blockJump = c.blockJump !== false; cfg.favbar = c.favbar !== false; cfg.twitch = c.twitchAdblock !== false; if (Array.isArray(c.autoPip)) cfg.autoPip = c.autoPip;
+  drawJump(); drawTw(); drawTiles(); drawFavBar(); refreshNav();
 });
 
 // edizione demo: badge sempre visibile + avviso chiaro nel pannello video

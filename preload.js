@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld("bn", {
   onDbg: cb => ipcRenderer.on("dbg", (_e, l) => cb(l)),
   // schede
   vidActive: id => ipcRenderer.invoke("vid:active", id),
+  thumb: url => ipcRenderer.invoke("thumb:make", url),
+  pip: (id, mode) => ipcRenderer.invoke("pip", id, mode),
+  twitchSet: on => ipcRenderer.invoke("twitch:set", on),
   onPasteGo: cb => ipcRenderer.on("pastego", (_e, t) => cb(t)),
   onNewTab: cb => ipcRenderer.on("newtab", (_e, url, fg) => cb(url, fg)),
   onShortcut: cb => ipcRenderer.on("shortcut", (_e, c) => cb(c)),

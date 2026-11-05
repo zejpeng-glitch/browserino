@@ -1,6 +1,6 @@
 {
   "name": "browserino-pc",
-  "version": "1.4.3",
+  "version": "1.4.5",
   "description": "Browserino per PC e Mac: browser pulito, senza popup e salti di pagina, con modalità player, schede, download video e registratore audio",
   "main": "main.js",
   "scripts": {
@@ -45,6 +45,12 @@
       "blocker.js",
       "blocklist.json",
       "videos.js",
+      "capture.js",
+      "capture-hook.js",
+      "contextmenu.js",
+      "twitchblock.js",
+      "thumbs.js",
+      "twitch-vaft.js",
       "downloader.js",
       "player.html",
       "player.js",

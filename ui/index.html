@@ -22,6 +22,7 @@ button:hover{background:#2d3650}button:disabled{opacity:.35}button.on{background
 #favbar::-webkit-scrollbar{height:0}body.player #favbar{display:none}
 .fchip{display:flex;align-items:center;gap:6px;max-width:170px;height:26px;padding:0 9px;border-radius:7px;color:var(--tx);font-size:13px;cursor:pointer;flex:0 0 auto}
 .fchip:hover{background:#2d3650}.fchip span{overflow:hidden;text-overflow:ellipsis}.fchip img{width:14px;height:14px;border-radius:3px}
+#tw.on{background:#6441a5}
 .fempty{color:var(--mut);font-size:12px}
 #cmenu{position:fixed;z-index:60;min-width:190px;background:#1b2232;border:1px solid var(--line);border-radius:9px;padding:4px;box-shadow:0 10px 30px #000b}
 #cmenu div{padding:7px 12px;border-radius:6px;cursor:pointer;font-size:13px}#cmenu div:hover{background:#2d3650}
@@ -34,6 +35,10 @@ webview.bg{visibility:hidden;pointer-events:none}
 .tile:hover{border-color:var(--ac)}.tile b{display:block;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tile span{color:var(--mut);font-size:12px;word-break:break-all}.tile i{position:absolute;right:8px;top:6px;color:var(--mut);font-style:normal}
 .tile i:hover{color:var(--ac)}
+.tile.th{padding:0;overflow:hidden}.tile .ti{width:100%;aspect-ratio:16/10;object-fit:cover;object-position:top;display:block;background:#0b0e14}.tile .tx{padding:10px 14px 12px}
+.tile.th i{background:#000a;border-radius:10px;width:20px;height:20px;line-height:20px;text-align:center;right:6px;top:6px}
+.tile.busy::after{content:"Carico l'anteprima…";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000a;color:#fff;font-size:13px}
+.tile.drag,.fchip.drag{opacity:.4}.tile.over{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac) inset}.fchip.over{box-shadow:-2px 0 0 var(--ac)}
 #vid.on{background:#2f7d4f}
 #demo{min-width:78px;font-size:13px;background:#8a5a00}#demo:hover{background:#a56d00}
 #vdemo{color:#f0b34a;font-size:12px;padding:4px 2px;line-height:1.35}
@@ -70,7 +75,9 @@ webview.bg{visibility:hidden;pointer-events:none}
     <button id="jump" title="Blocca i salti di pagina verso altri siti">⛔ salti</button>
     <button id="rec" title="Registra tutto l'audio che esce dalle casse (Ctrl+Maiusc+R). Premi di nuovo per fermare e salvare in Download">⏺ REC</button>
     <button id="demo" class="hide" title="Versione demo: i download salvano solo una parte del video e REC dura 2 minuti. Clic per sbloccare la versione completa">🔓 DEMO</button>
+    <button id="pip" title="Picture in picture: il video resta in una finestrina sopra le altre (Ctrl+Maiusc+P). Clic destro: PiP automatico per questo sito">🗗 PiP</button>
     <button id="vid" title="Video trovati nella pagina: player pulito e download">🎬 0</button>
+    <button id="tw" title="Blocca le pubblicità su Twitch (vale dalla prossima pagina che apri)">📺 Twitch</button>
     <button id="shield" title="Pubblicità e popup bloccati">🛡 0</button>
   </div>
   <div id="favbar" class="hide"></div>

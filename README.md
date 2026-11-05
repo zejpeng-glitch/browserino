@@ -17,6 +17,12 @@ Un piccolo browser per PC (Windows e Mac, basato su Electron) pensato per guarda
   - **⚡ Boost**: sui download HLS, il pulsante ⚡ porta le richieste in parallelo da 6 a 16 (se il sito rifiuta, torna da solo a un ritmo più basso).
   - **Barra dei preferiti** sotto l'indirizzo (Ctrl+Maiusc+B la nasconde); clic centrale o Ctrl+clic = nuova scheda, clic destro = menu.
   - **Clic destro** ovunque: incolla, copia, apri link in nuova scheda, "Incolla e vai" nella barra indirizzi.
+  - **📺 Twitch**: blocca le pubblicità su twitch.tv (usa lo script vaft di TwitchAdSolutions, licenza MIT). Il pulsante nella barra lo accende e spegne. Twitch cambia spesso, quindi può smettere di funzionare.
+  - **Rinomina preferiti**: clic destro sul preferito → Rinomina.
+  - **Sposta i preferiti**: trascinali con il mouse, sia nella barra sia nelle tessere della home. Clic destro su un preferito → "Carica anteprima" mette nella tessera una foto del sito (circa 20-60 KB).
+  - **🗗 Picture in picture**: pulsante nella barra, Ctrl+Maiusc+P o clic destro sul video. Il video resta in una finestrina sopra le altre; premendo di nuovo torna nella pagina.
+  - **PiP automatico per sito**: clic destro sul pulsante 🗗 → "PiP automatico su questo sito". Quando lasci la scheda o minimizzi con un video che sta andando, parte da solo; quando torni, rientra. Di base è acceso per twitch.tv e youtube.com.
+  - Niente più schermo intero automatico quando parte un video (resta il tasto F o il pulsante del player).
   - Ogni download ha la sua riga con **pausa, riprendi e annulla**.
 - **⏺ REC** (Ctrl+Maiusc+R): registra l'audio che esce dalle casse.
 - **🐞 Log**: mostra cosa succede durante un download, utile quando qualcosa va storto.
